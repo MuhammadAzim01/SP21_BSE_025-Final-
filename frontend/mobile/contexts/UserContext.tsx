@@ -1,6 +1,5 @@
+import React, { createContext, useContext, useState, ReactNode, Component } from 'react';
 import { View, Text } from 'react-native';
-import React from 'react';
-import { createContext, useContext, useState, ReactNode } from 'react';
 import { Role } from '../constants/constants';
 
 export const UserContext = createContext<UserContextType | null>(null);
@@ -21,14 +20,19 @@ type UserContextProviderProps = {
     children: ReactNode
 }
 
-export const UserContextProvider = ({ children }: UserContextProviderProps) => {
-    const [userDetails, setUser] = useState<UserT>({
-        name: "",
-        email: "",
-        phone: "",
-    });
+export class UserContextProvider extends Component<UserContextProviderProps, { userDetails: UserT }> {
+    constructor(props: UserContextProviderProps) {
+        super(props);
+        this.state = {
+            userDetails: {
+                name: "",
+                email: "",
+                phone: "",
+            }
+        };
+    }
 
-    const initializeData = async (token: string) => {
+    initializeData = async (token: string) => {
         try {
             const response = await fetch("http://10.0.2.2:8000/api/user/me", {
                 method: "GET",
@@ -39,17 +43,19 @@ export const UserContextProvider = ({ children }: UserContextProviderProps) => {
             });
             const responseData = await response.json();
 
-            setUser({
-                name: responseData['name'],
-                email: responseData['email'],
-                phone: responseData['phone']
+            this.setState({
+                userDetails: {
+                    name: responseData['name'],
+                    email: responseData['email'],
+                    phone: responseData['phone']
+                }
             });
         } catch (err) {
             console.log("Error while initializing data", err);
         }
     }
 
-    const updateUserDetails = async (token: string, userData: Partial<UserT>) => {
+    updateUserDetails = async (token: string, userData: Partial<UserT>) => {
         try {
             const response = await fetch("http://10.0.2.2:8000/api/user/me/", {
                 method: "PATCH",
@@ -65,22 +71,30 @@ export const UserContextProvider = ({ children }: UserContextProviderProps) => {
             }
 
             const responseData = await response.json();
-            setUser({
-                name: responseData['name'],
-                email: responseData['email'],
-                phone: responseData['phone']
+            this.setState({
+                userDetails: {
+                    name: responseData['name'],
+                    email: responseData['email'],
+                    phone: responseData['phone']
+                }
             });
         } catch (error) {
             console.error("There was a problem with the fetch operation:", error);
         }
     }
 
-    return (
-        <UserContext.Provider value={{ userDetails, initializeData, updateUserDetails }}>
-            {children}
-        </UserContext.Provider>
-    );
+    render() {
+        const { children } = this.props;
+        const { userDetails } = this.state;
+
+        return (
+            <UserContext.Provider value={{ userDetails, initializeData: this.initializeData, updateUserDetails: this.updateUserDetails }}>
+                {children}
+            </UserContext.Provider>
+        );
+    }
 }
+
 
 export const useUserContext = (): UserContextType => {
     const value = useContext(UserContext);
